@@ -12,7 +12,7 @@
 #
 
 # import the API functions
-source huawei_hilink_API.sh
+source huawei_hilink_api.sh
 
 # initialialize required variables
 host="192.168.8.1" 	# ip-address of the device (default 192.168.8.1)

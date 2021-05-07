@@ -29,7 +29,7 @@ If a login is required, the communication is more complex, since the device retu
 # The Bash API
 The bash script ´huawei_hilink_API.sh´ contains all required functions to communicate with a Hilink device. Login, logout, enabling the SIM card and managing the access tokens is hidden from the user. Just call the function ´_switchMobileData on´ in your script and the rest happens in the background. For this to work, an initialization of the API is required:
 ´´´
-$ source huawei_hilink_API.sh
+$ source huawei_hilink_api.sh
 $ host="192.168.8.1"
 $ pw="1234Secret"
 $ pin="1234"
