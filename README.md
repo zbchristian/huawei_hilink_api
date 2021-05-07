@@ -27,7 +27,7 @@ All parameters and return values to and from the device are passed as XML data.
 If a login is required, the communication is more complex, since the device returns after a succesful login a list with 30 access tokens. Each of these tokens can only be used once.   
 
 # The Bash API
-The bash script `huawei_hilink_API.sh` contains all required functions to communicate with a Hilink device. Login, logout, enabling the SIM card and managing the access tokens is hidden from the user. Just call the function `_switchMobileData on` in your script and the rest happens in the background. For this to work, an initialization of the API is required:
+The bash script `huawei_hilink_api.sh` contains all required functions to communicate with a Hilink device. Login, logout, enabling the SIM card and managing the access tokens is hidden from the user. Just call the function `_switchMobileData on` in your script and the rest happens in the background. For this to work, an initialization of the API is required:
 ```
 $ source huawei_hilink_api.sh
 $ host="192.168.8.1"

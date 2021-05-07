@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Example to utilize github.com/zbchristian/huawei-hilink-API
+# Example to utilize github.com/zbchristian/huawei_hilink_api
 # ===========================================================
 # - switch on/off the device and enable mobile data
 # - display the device name and connection mode
