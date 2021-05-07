@@ -27,7 +27,7 @@ All parameters and return values to and from the device are passed as XML data.
 If a login is required, the communication is more complex, since the device returns after a succesful login a list with 30 access tokens. Each of these tokens can only be used once.   
 
 # The Bash API
-The bash script `huawei_hilink_api.sh` contains all required functions to communicate with a Hilink device. Login, logout, enabling the SIM card and managing the access tokens is hidden from the user. Just call the function `_switchMobileData on` in your script and the rest happens in the background. For this to work, an initialization of the API is required:
+The bash script `huawei_hilink_api.sh` contains all required functions to communicate with a Hilink device. Login, logout, enabling the SIM card and managing the access tokens is hidden from the user. Just call for example the function `_switchMobileData on` in your script and the rest happens in the background. For this to work, an initialization of the API is required:
 ```
 $ source huawei_hilink_api.sh
 $ host="192.168.8.1"
@@ -57,6 +57,9 @@ $ echo $response
 $ _getNetProvider "fullname"
 ```
 All function return a value of 0, if the call was successful or 1, if it failed. The status is available in `$status` and the return value in `$response`.
+
+To retrieve a value from the returned XML data (stored in `$response`), a call to `_retrieveFromXML` can be used. Example: 
+after `_getSignal` a call to `_retrieveFromXML "rssi"` will return the value of the signal level. If only a single parameter is needed, the name can be passed to the function: `_getSignal "rssi"`.
 
 After the communcation has been done, the API should be terminated by 
 ```
