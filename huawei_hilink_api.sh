@@ -149,7 +149,11 @@ function _getMobileDataStatus() {
 function _enableSIM() {
 #SimState:
 #255 - no SIM,
-#256 - error CPIN,
+#256 - error CPIN,host="192.168.8.1" 
+user="admin"
+pw="7979867gcalor"
+pin="7443"
+
 #257 - ready,
 #258 - PIN disabled,
 #259 - check PIN,
@@ -168,18 +172,6 @@ function _enableSIM() {
         if [[ $simstate -eq 255  ]]; then status="NO SIM"; return 1; fi
     fi
     return 1
-}
-
-# helper function to parse $response (xml format) for a value 
-# call another function first!
-# parameter: tag-name
-function _valueFromResponse() {
-    if [ -z "$response" ] || [ -z "$1" ]; then return 1; fi
-    par="$1"
-    value=`echo $response | sed  -rn 's/.*<'$par'>(.*)<\/'$par'>.*/\1/pi'`
-    if [ -z "$value" ]; then return 1; fi   
-    echo "$value"
-    return 0
 }
 
 # obtain session and verification token - stored in vars $sessID and $token 
@@ -203,7 +195,6 @@ function _sessToken() {
 # requires stored user="admin"; pw="1234secret";host="192.168.8.1" 
 # parameter: none
 function _login() {
-#    _sessToken  # this starts a new session
     if _loginState; then return 0; fi    # login not required, or already done
     _sessToken
     # get password type
@@ -351,6 +342,31 @@ function _hostReachable() {
 	return 0;
 }
 
+# helper function to parse $response (xml format) for a value 
+# call another function first!
+# parameter: tag-name
+function _valueFromResponse() {
+    if [ -z "$response" ] || [ -z "$1" ]; then return 1; fi
+    par="$1"
+    value=$(echo $response | sed  -rn 's/.*<'$par'>(.*)<\/'$par'>.*/\1/pi')
+    if [ -z "$value" ]; then return 1; fi   
+    echo "$value"
+    return 0
+}
+
+# list all keys of the current xml response
+function _keysFromResponse() {
+	if [ -z "$response" ]; then return 1; fi
+	echo $response | grep -oiP "(?<=<)[a-z_-]*(?=>)"
+	return 0
+}
+
+# return all key=value pairs of the current xml response
+function _keyValuePairs() {
+	if [ -z "$response" ]; then return 1; fi
+	echo $response | sed -n 's/<\([^>]*\)>\(.*\)<\/\1>[^<]*/\1=\"\2\"\n/gpi')
+	return 0
+}
 
 host="192.168.8.1"
 user="admin"

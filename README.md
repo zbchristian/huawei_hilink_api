@@ -91,7 +91,9 @@ Be aware, that each shell script runs in a separate shell environment. You need 
 * `_logout` - log out of the API
 * `_sessToken` - get a session id and request token
 * `_getToken` - get the next token in the list. Is called by `_sendRequest` in order to get the next request token
-* `_valueFromResponse` - parse the xml formatted response (`$response`) for a certain key and extract the value 
+* `_valueFromResponse` - parse the xml formatted response (`$response`) for a certain key and extract the value
+* `_keysFromResponse` - retrieve the list of keys of the last response 
+* `_keyValuePairs` - retrieve list of key=value pairs (e.g. `DeviceName="E3372h-320" ...` after a call to `_getDeviceInformation`) from the last response
 * `_hostReachable` - check if the currently defined host is reachable
 
 
