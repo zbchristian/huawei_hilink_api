@@ -36,11 +36,11 @@
 # Initialization procedure
 # ========================
 #
-# host="192.168.8.1"   	# ip address of device
-# user="admin"         	# user name if locked (default admin)
-# pw="1234Secret"      	# password if locked 
-# pin="1234"			# PIN of SIM
-# _initHilinkAPI		# initialize the API
+# host="192.168.8.1"    # ip address of device
+# user="admin"          # user name if locked (default admin)
+# pw="1234Secret"       # password if locked 
+# pin="1234"            # PIN of SIM
+# _initHilinkAPI        # initialize the API
 #
 # Termination
 # ===========
@@ -49,22 +49,22 @@
 
 # initialize
 function _initHilinkAPI() {
-	if [ -z "$host" ]; then host="192.168.8.1"; fi
-	if ! _hostReachable; then return 1; fi
-	_sessToken
-	_login
-	return $?
+    if [ -z "$host" ]; then host="192.168.8.1"; fi
+    if ! _hostReachable; then return 1; fi
+    _sessToken
+    _login
+    return $?
 }
 
 # Cleanup
 function _closeHilinkAPI() {
-	if [ -z "$host" ]; then host="192.168.8.1"; fi
-	if ! _hostReachable; then return 1; fi
-	_logout
-	tokenlist=""
-	sessID=""
-	token=""
-	return 0
+    if [ -z "$host" ]; then host="192.168.8.1"; fi
+    if ! _hostReachable; then return 1; fi
+    _logout
+    tokenlist=""
+    sessID=""
+    token=""
+    return 0
 }
 
 # get status (connection status, DNS, )
@@ -72,8 +72,8 @@ function _closeHilinkAPI() {
 function _getStatus() {
     if _login; then
         if _sendRequest "api/monitoring/status"; then
-		if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
-	fi
+        if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
+    fi
         return $?
     else
         return 1
@@ -81,13 +81,13 @@ function _getStatus() {
 }
 
 function _isConnected() {
-	conn=$(_getStatus "connectionstatus")
-	status="NO"
-	if [ ! -z "$conn" ] && [ $conn -eq 901 ]; then
-		status="YES"
-		return 0
-	fi
-	return 1
+    conn=$(_getStatus "connectionstatus")
+    status="NO"
+    if [ ! -z "$conn" ] && [ $conn -eq 901 ]; then
+        status="YES"
+        return 0
+    fi
+    return 1
 }
 
 # get device information (device name, imei, imsi, msisdn-phone number, MAC, WAN IP ...)
@@ -95,8 +95,8 @@ function _isConnected() {
 function _getDeviceInformation() {
     if _login; then 
         if _sendRequest "api/device/information"; then
-		if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
-	fi
+        if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
+    fi
         return $?
     else
         return 1
@@ -108,8 +108,8 @@ function _getDeviceInformation() {
 function _getNetProvider() {
     if _login; then 
         if _sendRequest "api/net/current-plmn"; then
-		if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
-	fi
+        if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
+    fi
         return $?
     else
         return 1
@@ -121,8 +121,8 @@ function _getNetProvider() {
 function _getSignal() {
     if _login; then
         if _sendRequest "api/device/signal"; then
-		if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
-	fi
+        if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
+    fi
         return $?
     else
         return 1
@@ -165,10 +165,10 @@ pin="7443"
         simstate=`echo $response | sed  -rn 's/.*<simstate>([0-9]*)<\/simstate>.*/\1/pi'`
         if [[ $simstate -eq 257  ]]; then status="SIM ready"; return 0; fi
         if [[ $simstate -eq 260  ]]; then 
-   		status="PIN required"
-     		if [ ! -z "$pin" ]; then _setPIN "$pin"; fi
-		return $?
-	fi
+        status="PIN required"
+            if [ ! -z "$pin" ]; then _setPIN "$pin"; fi
+        return $?
+    fi
         if [[ $simstate -eq 255  ]]; then status="NO SIM"; return 1; fi
     fi
     return 1
@@ -216,8 +216,8 @@ function _login() {
             rm -f /tmp/hilink_login_hdr.txt
             _sendRequest "api/user/login"
             if [ ! -z "$status" ] && [ "$status" = "OK" ]; then 
-		tokenlist=( $(cat /tmp/hilink_login_hdr.txt | sed -rn 's/^__RequestVerificationToken:\s*([0-9a-z#]*).*$/\1/pi' | sed 's/#/ /g') )
-		_getToken
+        tokenlist=( $(cat /tmp/hilink_login_hdr.txt | sed -rn 's/^__RequestVerificationToken:\s*([0-9a-z#]*).*$/\1/pi' | sed 's/#/ /g') )
+        _getToken
                 sessID=$(cat /tmp/hilink_login_hdr.txt  | grep -ioP 'SessionID=([a-z0-9]*)')
                 if [ ! -z "$sessID" ] &&  [ ! -z "$token" ]; then
                    return 0 
@@ -230,16 +230,16 @@ function _login() {
 # logout of hilink device
 # parameter: none
 function _logout() {
-	if _loginState; then 
-	        xmldata="<?xml version: '1.0' encoding='UTF-8'?><request><Logout>1</Logout></request>"
-	        if _sendRequest "api/user/logout"; then 
-			tokenlist=""
-			sessID=""
-			token=""
-		fi
-        	return $?
-	fi
-	return 1
+    if _loginState; then 
+            xmldata="<?xml version: '1.0' encoding='UTF-8'?><request><Logout>1</Logout></request>"
+            if _sendRequest "api/user/logout"; then 
+            tokenlist=""
+            sessID=""
+            token=""
+        fi
+            return $?
+    fi
+    return 1
 }
 
 # parameter: none
@@ -303,7 +303,7 @@ function _sendRequest() {
                     -H "Cookie: $sessID" \
                     -H "__RequestVerificationToken: $token" \
                     -d "$xmldata" $xtraopts 2> /dev/null)
-	_getToken
+    _getToken
     fi
     if [ ! -z "$response" ];then 
         response=$(echo $response | tr -d '\012\015') # delete newline chars 
@@ -327,19 +327,19 @@ function _sendRequest() {
 # handle the list of tokens available after login
 # parameter: none
 function _getToken() {
-	if [ ! -z "$tokenlist" ] && [ ${#tokenlist[@]} -gt 0 ]; then
-		token=${tokenlist[0]}		# get first token in list
-		tokenlist=("${tokenlist[@]:1}")	# remove used token from list
-		if [ ${#tokenlist[@]} -eq 0 ]; then
-			_logout		# use the last token to logout
-		fi
-	fi
+    if [ ! -z "$tokenlist" ] && [ ${#tokenlist[@]} -gt 0 ]; then
+        token=${tokenlist[0]}       # get first token in list
+        tokenlist=("${tokenlist[@]:1}") # remove used token from list
+        if [ ${#tokenlist[@]} -eq 0 ]; then
+            _logout     # use the last token to logout
+        fi
+    fi
 }
 
 function _hostReachable() {
-	avail=`timeout 0.5 ping -c 1 $host | sed -rn 's/.*time=.*/1/p'`
-	if [ -z "$avail" ]; then return 1; fi
-	return 0;
+    avail=`timeout 0.5 ping -c 1 $host | sed -rn 's/.*time=.*/1/p'`
+    if [ -z "$avail" ]; then return 1; fi
+    return 0;
 }
 
 # helper function to parse $response (xml format) for a value 
@@ -356,16 +356,16 @@ function _valueFromResponse() {
 
 # list all keys of the current xml response
 function _keysFromResponse() {
-	if [ -z "$response" ]; then return 1; fi
-	echo $response | grep -oiP "(?<=<)[a-z_-]*(?=>)"
-	return 0
+    if [ -z "$response" ]; then return 1; fi
+    echo $response | grep -oiP "(?<=<)[a-z_-]*(?=>)"
+    return 0
 }
 
 # return all key=value pairs of the current xml response
 function _keyValuePairs() {
-	if [ -z "$response" ]; then return 1; fi
-	echo $response | sed -n 's/<\([^>]*\)>\(.*\)<\/\1>[^<]*/\1=\"\2\"\n/gpi')
-	return 0
+    if [ -z "$response" ]; then return 1; fi
+    echo $response | sed -n 's/<\([^>]*\)>\(.*\)<\/\1>[^<]*/\1=\"\2\"\n/gpi')
+    return 0
 }
 
 host="192.168.8.1"
