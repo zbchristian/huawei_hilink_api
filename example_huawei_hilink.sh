@@ -34,8 +34,8 @@ if [ -z "$1" ] || [[ $1 =~ ^on$ ]]; then
 	fi
 	if _getDeviceInformation; then	# extract device informations
 		# echo $response # display all available informations (XML format)
-		name=$(_retrieveFromXML "devicename")
-		mode=$(_retrieveFromXML "workmode")
+		name=$(_valueFromResponse "devicename")
+		mode=$(_valueFromResponse "workmode")
 	fi
 	operator=$(_getNetProvider "fullname")  # get the name of the network provider
 	# echo $response # display all available informations (XML format)

@@ -16,8 +16,8 @@
 #   o get informations about the device: _getDeviceInformation and _getStatus and _getNetProvider
 #     all functions return XML formatted data in $response.
 #   o Check if device is connected: "if _isConnected; then .... fi"
-#   o $response can be parsed by calling _retrieveFromXML 
-#     e.g "_retrieveFromXML msisdn" to get the phone number after a call to _getDeviceInformation
+#   o $response can be parsed by calling _valueFromResponse 
+#     e.g "_valueFromResponse msisdn" to get the phone number after a call to _getDeviceInformation
 #
 #
 # Usage of functions 
@@ -72,7 +72,7 @@ function _closeHilinkAPI() {
 function _getStatus() {
     if _login; then
         if _sendRequest "api/monitoring/status"; then
-		if [ ! -z "$1" ]; then _retrieveFromXML "$1"; fi
+		if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
 	fi
         return $?
     else
@@ -95,7 +95,7 @@ function _isConnected() {
 function _getDeviceInformation() {
     if _login; then 
         if _sendRequest "api/device/information"; then
-		if [ ! -z "$1" ]; then _retrieveFromXML "$1"; fi
+		if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
 	fi
         return $?
     else
@@ -108,7 +108,7 @@ function _getDeviceInformation() {
 function _getNetProvider() {
     if _login; then 
         if _sendRequest "api/net/current-plmn"; then
-		if [ ! -z "$1" ]; then _retrieveFromXML "$1"; fi
+		if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
 	fi
         return $?
     else
@@ -121,7 +121,7 @@ function _getNetProvider() {
 function _getSignal() {
     if _login; then
         if _sendRequest "api/device/signal"; then
-		if [ ! -z "$1" ]; then _retrieveFromXML "$1"; fi
+		if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
 	fi
         return $?
     else
@@ -134,7 +134,7 @@ function _getSignal() {
 function _getMobileDataStatus() {
     if _login; then
         if _sendRequest "api/dialup/mobile-dataswitch"; then
-                status=$(_retrieveFromXML "dataswitch")
+                status=$(_valueFromResponse "dataswitch")
                 if [ $? -eq 0  ] && [ ! -z "$status" ]; then echo "$status"; fi
         fi
         return $?
@@ -170,10 +170,10 @@ function _enableSIM() {
     return 1
 }
 
-# helper function to parse $response for a value
+# helper function to parse $response (xml format) for a value 
 # call another function first!
 # parameter: tag-name
-function _retrieveFromXML() {
+function _valueFromResponse() {
     if [ -z "$response" ] || [ -z "$1" ]; then return 1; fi
     par="$1"
     value=`echo $response | sed  -rn 's/.*<'$par'>(.*)<\/'$par'>.*/\1/pi'`

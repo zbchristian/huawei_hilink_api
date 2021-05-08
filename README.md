@@ -14,6 +14,9 @@ The default parameters of these devices are:
 * user name: `admin`
 * no password for the access is set
 
+# Example script
+The example `example_huawei_hilink.sh` has to be called with a single parameter `on` or `off`. The script opens the API, connects or disconnects to/from the network and, in case of a connection, prints an information about the device and the connection. The API is terminated at the end of the script.
+
 ## The Protocol
 Since HTTP is used for the communication, each API call correspond to an HTTP address.
 
@@ -58,8 +61,8 @@ $ _getNetProvider "fullname"
 ```
 All function return a value of 0, if the call was successful or 1, if it failed. The status is available in `$status` and the return value in `$response`.
 
-To retrieve a value from the returned XML data (stored in `$response`), a call to `_retrieveFromXML` can be used. Example: 
-after `_getSignal` a call to `_retrieveFromXML "rssi"` will return the value of the signal level. If only a single parameter is needed, the name can be passed to the function: `_getSignal "rssi"`.
+To retrieve a value from the returned XML data (stored in `$response`), a call to `_valueFromResponse` can be used. Example: 
+after `_getSignal` a call to `_valueFromResponse "rssi"` will return the value of the signal level. If only a single parameter is needed, the name can be passed to the function: `_getSignal "rssi"`.
 
 After the communcation has been done, the API should be terminated by 
 ```
@@ -71,9 +74,27 @@ Be aware, that each shell script runs in a separate shell environment. You need 
 
 ## Available functions
 
+* `_initHilinkAPI` - initialize the API 
+* `_closeHilinkAPI` - cleanup and logout
+* `_switchMobileData` - login in, connect to the network and enable/disable mobile data (parameter `on` or `off`) 
+* `_getMobileDataStatus` - status of the mobile data connection 
+* `_isConnected` - return 0 if connected, 1 if not
+* `_getStatus` - get device status informations
+* `_getDeviceInformation` - get device informations (name ...)
+* `_getNetProvider` - information about the current network provider
+* `_getSignal` - get signal information (rssi and more)
+* `_enableSIM` - enable the SIM. Will call `_setPIN`, if locked
+* `_loginState` - returns 0, if session is logged in, or no login required. Otherwise 1 is returned
+* `_setPIN` - set the PIN of the SIM card. Parameter is the PIN number
+* `_sendRequest` - send a request to the device (ip-address in `$host`). Parameter is the path of the request (e.g. `_sendRequest "api/monitoring/status"`)
+* `_login` - unlock the API, if a password is set
+* `_logout` - log out of the API
+* `_sessToken` - get a session id and request token
+* `_getToken` - get the next token in the list. Is called by `_sendRequest` in order to get the next request token
+* `_valueFromResponse` - parse the xml formatted response (`$response`) for a certain key and extract the value 
+* `_hostReachable` - check if the currently defined host is reachable
+
+
 ## Direct communication with the device
 The function `_sendRequest` allows to call directly the Hilink device. the parameter is the path of the corresponding function. Example `_sendRequest "api/monitoring/status`. The return value is 0 if successful and 1 if it failed. To send a request, the corresponding XML data are required in `$xmldata`. The response is retuned in `$response` and the status of the call in `$status`.
-
-# Example script
-The example `example_huawei_hilink.sh` has to be called with a single parameter `on` or `off`. The script opens the API, connects or disconnects to/from the network and, in case of a connection, prints an information about the device and the connection. The API is terminated at the end of the script.
 
