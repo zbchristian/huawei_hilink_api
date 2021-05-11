@@ -36,7 +36,7 @@
 # Initialization procedure
 # ========================
 #
-# host="192.168.8.1"    # ip address of device
+# host=$host_default    # ip address of device
 # user="admin"          # user name if locked (default admin)
 # pw="1234Secret"       # password if locked 
 # pin="1234"            # PIN of SIM
@@ -47,19 +47,51 @@
 # cleanup the API before quitting the shell
 # _closeHilinkAPI
 
+host_default="192.168.8.1"
+save_file="/tmp/hilink_api_saved.dat"
+save_age=60
+header_file="/tmp/hilink_login_hdr.txt"
+
 # initialize
 function _initHilinkAPI() {
-    if [ -z "$host" ]; then host="192.168.8.1"; fi
+    if [ -z "$host" ]; then host=$host_default; fi
     if ! _hostReachable; then return 1; fi
-    _sessToken
+    if [ -f $save_file ]; then # found file with saved data
+        _getSavedData
+        age=$(( $(date +%s) - $(stat $save_file  -c %Y) ))
+        if [[ $age -gt $save_age ]]; then 
+            rm -f $save_file
+            _logout
+            _sessToken
+        fi
+    fi
+    if [ -z "$sessID" ] || [ -z "$token" ]; then
+        _sessToken
+    fi
     _login
     return $?
 }
 
+function _getSavedData() {
+    if [ -f $save_file ]; then  # restore saved session data
+		dat=$(cat $save_file)
+		sessID=$(echo "$dat" | sed -nr 's/sessionid: ([a-z0-9]*)/\1/ip')
+        token=$(echo "$dat" | sed -nr 's/token: ([a-z0-9]*)/\1/ip')
+        tokenlist=( $(echo "$dat" | sed -nr 's/tokenlist: ([a-z0-9 ]*)/\1/ip') )
+    fi
+}
+
 # Cleanup
+# parameter: "save" - will store sessionid and tokens in file
 function _closeHilinkAPI() {
-    if [ -z "$host" ]; then host="192.168.8.1"; fi
+    if [ -z "$host" ]; then host=$host_default; fi
     if ! _hostReachable; then return 1; fi
+    rm -f $save_file
+    if [ ! -z "$1" ] && [ "${1,,}" =~ "save" ]; then
+        echo "sessionid: $sessID" > $save_file
+        echo "token: $token" >> $save_file
+        echo "tokenlist: ${tokenlist[@]}" >> $save_file
+    fi
     _logout
     tokenlist=""
     sessID=""
@@ -149,7 +181,7 @@ function _getMobileDataStatus() {
 function _enableSIM() {
 #SimState:
 #255 - no SIM,
-#256 - error CPIN,host="192.168.8.1" 
+#256 - error CPIN,host=$host_default 
 user="admin"
 pw="7979867gcalor"
 pin="7443"
@@ -177,6 +209,9 @@ pin="7443"
 # obtain session and verification token - stored in vars $sessID and $token 
 # parameter: none
 function _sessToken() {
+    tokenlist=""
+    token=""
+    sessID=""
     response=$(curl -s http://$host/api/webserver/SesTokInfo -m 5 2> /dev/null)
     if [ -z "$response" ]; then echo "No access to device at $host"; return 1; fi
     status=$(echo "$response" | sed  -nr 's/.*<code>([0-9]*)<\/code>.*/\1/ip')
@@ -192,7 +227,7 @@ function _sessToken() {
 }
 
 # unlock device (if locked) with user name and password
-# requires stored user="admin"; pw="1234secret";host="192.168.8.1" 
+# requires stored user="admin"; pw="1234secret";host=$host_default 
 # parameter: none
 function _login() {
     if _loginState; then return 0; fi    # login not required, or already done
@@ -212,13 +247,13 @@ function _login() {
             encpw=$(echo -n "$pwtype4" | base64 --wrap=0)
             if [ $pwtype -ne 4 ]; then encpw=$pwtype3; fi
             xmldata="<?xml version='1.0' encoding='UTF-8'?><request><Username>$user</Username><Password>$encpw</Password><password_type>$pwtype</password_type></request>"
-            xtraopts="--dump-header /tmp/hilink_login_hdr.txt"
-            rm -f /tmp/hilink_login_hdr.txt
+            xtraopts="--dump-header $header_file"
+            rm -f $header_file
             _sendRequest "api/user/login"
             if [ ! -z "$status" ] && [ "$status" = "OK" ]; then 
-        tokenlist=( $(cat /tmp/hilink_login_hdr.txt | sed -rn 's/^__RequestVerificationToken:\s*([0-9a-z#]*).*$/\1/pi' | sed 's/#/ /g') )
+        tokenlist=( $(cat $header_file | sed -rn 's/^__RequestVerificationToken:\s*([0-9a-z#]*).*$/\1/pi' | sed 's/#/ /g') )
         _getToken
-                sessID=$(cat /tmp/hilink_login_hdr.txt  | grep -ioP 'SessionID=([a-z0-9]*)')
+                sessID=$(cat $header_file  | grep -ioP 'SessionID=([a-z0-9]*)')
                 if [ ! -z "$sessID" ] &&  [ ! -z "$token" ]; then
                    return 0 
                 fi
@@ -303,7 +338,7 @@ function _sendRequest() {
                     -H "Cookie: $sessID" \
                     -H "__RequestVerificationToken: $token" \
                     -d "$xmldata" $xtraopts 2> /dev/null)
-    _getToken
+        _getToken
     fi
     if [ ! -z "$response" ];then 
         response=$(echo $response | tr -d '\012\015') # delete newline chars 
@@ -319,6 +354,7 @@ function _sendRequest() {
     else
         status="ERROR"
     fi
+    if [[ "$status" =~ ERROR ]]; then _handleError; fi
     xtraopts=""
     xmldata=""
     return $ret
@@ -334,6 +370,59 @@ function _getToken() {
             _logout     # use the last token to logout
         fi
     fi
+}
+
+# Analyse $status for error code 
+function _handleError() {
+    txt=$(_getErrorText)
+    if [ -z "$code" ]; then return 1; fi
+    ret=0
+    case "$code" in
+        101|108003|108007)
+            ret=1
+            status="$txt"
+            ;;
+        108001|108002|108006)
+            ret=1
+            status="$txt"
+            ;;
+        125001|125002|125003)
+            _sessToken
+            ret=0
+            ;;
+        *)
+            ;;
+    esac
+    return "$ret"
+}
+
+declare -A err_hilink_api
+err_hilink_api[101]="Unable to get session ID/token"
+err_hilink_api[108001]="Invalid username/password"
+err_hilink_api[108002]=${errors[108001]}
+err_hilink_api[108006]=${errors[108001]}
+err_hilink_api[108003]="User already logged in - need to wait a bit"
+err_hilink_api[108007]="Too many login attempts - need to wait a bit"
+err_hilink_api[125001]="Invalid session/request token"
+err_hilink_api[125002]=${errors[125001]}
+err_hilink_api[125003]=${errors[125001]}
+
+# check error and return error text
+# status passsed in $status, or $1
+function _getErrorText() {
+    err="$status"
+    code="0"
+    if [ -z "$1" ]; then err="$1"; fi
+    if [ -z "$err" ]; then return 1; fi
+    errortext="$err"
+    if [[  "$err" =~ ERROR\ *([0-9]*) ]] && [ ! -z "$BASH_REMATCH" ]; then
+        code=${BASH_REMATCH[1]}
+        if [ ! -z "$err_hilink_api[$code]}" ]; then 
+            errortext="$err_hilink_api[$code]}"
+        fi
+    fi
+    echo $errortext
+    return 0
 }
 
 function _hostReachable() {
@@ -364,19 +453,19 @@ function _keysFromResponse() {
 # return all key=value pairs of the current xml response
 function _keyValuePairs() {
     if [ -z "$response" ]; then return 1; fi
-    echo $response | sed -n 's/<\([^>]*\)>\(.*\)<\/\1>[^<]*/\1=\"\2\"\n/gpi')
+    echo $response | sed -n 's/<\([^>]*\)>\(.*\)<\/\1>[^<]*/\1=\"\2\"\n/gpi'
     return 0
 }
 
-host="192.168.8.1"
+host=$host_default
 user="admin"
 pw=""
 token=""
+tokenlist=""
 sessID=""
 xmldata=""
 xtraopts=""
 response=""
 status=""
 pwtype=-1
-
-
+ 
