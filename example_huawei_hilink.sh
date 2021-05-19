@@ -38,7 +38,7 @@ if [ -z "$1" ] || [[ $1 =~ ^on$ ]]; then
         mode=$(_valueFromResponse "workmode")
     fi
     operator=$(_getNetProvider "fullname")  # get the name of the network provider
-    # echo $response # display all available informations (XML format)
+    # _keyValuePairs # display all available informations as key value pairs (from $response)
 
     echo "Device $name connected to $operator in $mode mode"
 else 

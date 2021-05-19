@@ -87,7 +87,7 @@ function _closeHilinkAPI() {
     if [ -z "$host" ]; then host=$host_default; fi
     if ! _hostReachable; then return 1; fi
     rm -f $save_file
-	[ ! -z "$1" ] && opt="${1,,}"
+    [ ! -z "$1" ] && opt="${1,,}"
     if [ ! -z "$opt" ] && [ "$opt" = "save" ]; then
         echo "sessionid: $sessID" > $save_file
         echo "token: $token" >> $save_file
@@ -105,12 +105,11 @@ function _closeHilinkAPI() {
 function _getStatus() {
     if _login; then
         if _sendRequest "api/monitoring/status"; then
-        if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
-    fi
+            if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
+        fi
         return $?
-    else
-        return 1
     fi
+    return 1
 }
 
 function _isConnected() {
@@ -124,42 +123,45 @@ function _isConnected() {
 }
 
 # get device information (device name, imei, imsi, msisdn-phone number, MAC, WAN IP ...)
-# parameter: none
+# parameter: name of parameter to return
 function _getDeviceInformation() {
     if _login; then 
         if _sendRequest "api/device/information"; then
-        if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
-    fi
+            if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
+        fi
         return $?
-    else
-        return 1
     fi
+    return 1
 }
 
 # get net provider information 
-# parameter: none
+# parameter: name of parameter to return 
 function _getNetProvider() {
     if _login; then 
         if _sendRequest "api/net/current-plmn"; then
-        if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
-    fi
+            if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
+        fi
         return $?
-    else
-        return 1
     fi
+    return 1
 }
 
 # get signal level
-# parameter: none
+# parameter: name of parameter to return
 function _getSignal() {
     if _login; then
         if _sendRequest "api/device/signal"; then
-        if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
-    fi
+            if [ ! -z "$1" ]; then _valueFromResponse "$1"; fi
+        fi
         return $?
-    else
-        return 1
     fi
+    return 1
+}
+
+function _getAllInformations() {
+    if _getDeviceInformation; then _keyValuePairs; fi
+    if _getSignal; then _keyValuePairs; fi
+    if _getNetProvider; then _keyValuePairs; fi
 }
 
 # get status of mobile data connection
@@ -171,9 +173,8 @@ function _getMobileDataStatus() {
                 if [ $? -eq 0  ] && [ ! -z "$status" ]; then echo "$status"; fi
         fi
         return $?
-    else
-        return 1
     fi
+    return 1
 }
 
 
@@ -183,10 +184,6 @@ function _enableSIM() {
 #SimState:
 #255 - no SIM,
 #256 - error CPIN,host=$host_default 
-user="admin"
-pw="7979867gcalor"
-pin="7443"
-
 #257 - ready,
 #258 - PIN disabled,
 #259 - check PIN,
@@ -213,6 +210,7 @@ function _sessToken() {
     tokenlist=""
     token=""
     sessID=""
+    login_state=""
     response=$(curl -s http://$host/api/webserver/SesTokInfo -m 5 2> /dev/null)
     if [ -z "$response" ]; then echo "No access to device at $host"; return 1; fi
     status=$(echo "$response" | sed  -nr 's/.*<code>([0-9]*)<\/code>.*/\1/ip')
@@ -238,28 +236,28 @@ function _login() {
     pwtype=$(echo "$response" | sed  -rn 's/.*<password_type>([0-9])<\/password_type>.*/\1/pi')
     if [ -z "$pwtype" ];then pwtype=4; fi   # fallback is type 4
     if [[ ! -z "$user" ]] && [[ ! -z "$pw" ]]; then
-            # password encoding
-            # type 3 : base64(pw) encoded
-            # type 4 : base64(sha256sum(user + base64(sha256sum(pw)) + token))
-            pwtype3=$(echo -n "$pw" | base64 --wrap=0)
-            hashedpw=$(echo -n "$pw" | sha256sum -b | sed -nr 's/^([0-9a-z]*).*$/\1/ip' )
-            hashedpw=$(echo -n "$hashedpw" | base64 --wrap=0)
-            pwtype4=$(echo -n "$user$hashedpw$token" | sha256sum -b | sed -nr 's/^([0-9a-z]*).*$/\1/ip' )
-            encpw=$(echo -n "$pwtype4" | base64 --wrap=0)
-            if [ $pwtype -ne 4 ]; then encpw=$pwtype3; fi
-            xmldata="<?xml version='1.0' encoding='UTF-8'?><request><Username>$user</Username><Password>$encpw</Password><password_type>$pwtype</password_type></request>"
-            xtraopts="--dump-header $header_file"
-            rm -f $header_file
-            _sendRequest "api/user/login"
-            if [ ! -z "$status" ] && [ "$status" = "OK" ]; then 
-                # store the list of 30 tokens. Each token is valid for a single request
-                tokenlist=( $(cat $header_file | sed -rn 's/^__RequestVerificationToken:\s*([0-9a-z#]*).*$/\1/pi' | sed 's/#/ /g') )
-                _getToken
-                sessID=$(cat $header_file  | grep -ioP 'SessionID=([a-z0-9]*)')
-                if [ ! -z "$sessID" ] &&  [ ! -z "$token" ]; then
-                   return 0 
-                fi
+        # password encoding
+        # type 3 : base64(pw) encoded
+        # type 4 : base64(sha256sum(user + base64(sha256sum(pw)) + token))
+        pwtype3=$(echo -n "$pw" | base64 --wrap=0)
+        hashedpw=$(echo -n "$pw" | sha256sum -b | sed -nr 's/^([0-9a-z]*).*$/\1/ip' )
+        hashedpw=$(echo -n "$hashedpw" | base64 --wrap=0)
+        pwtype4=$(echo -n "$user$hashedpw$token" | sha256sum -b | sed -nr 's/^([0-9a-z]*).*$/\1/ip' )
+        encpw=$(echo -n "$pwtype4" | base64 --wrap=0)
+        if [ $pwtype -ne 4 ]; then encpw=$pwtype3; fi
+        xmldata="<?xml version='1.0' encoding='UTF-8'?><request><Username>$user</Username><Password>$encpw</Password><password_type>$pwtype</password_type></request>"
+        xtraopts="--dump-header $header_file"
+        rm -f $header_file
+        _sendRequest "api/user/login"
+        if [ ! -z "$status" ] && [ "$status" = "OK" ]; then 
+            # store the list of 30 tokens. Each token is valid for a single request
+            tokenlist=( $(cat $header_file | sed -rn 's/^__RequestVerificationToken:\s*([0-9a-z#]*).*$/\1/pi' | sed 's/#/ /g') )
+            _getToken
+            sessID=$(cat $header_file  | grep -ioP 'SessionID=([a-z0-9]*)')
+            if [ ! -z "$sessID" ] &&  [ ! -z "$token" ]; then
+               return 0 
             fi
+        fi
     fi
     return 1
 }
@@ -268,20 +266,25 @@ function _login() {
 # parameter: none
 function _logout() {
     if _loginState; then 
-            xmldata="<?xml version: '1.0' encoding='UTF-8'?><request><Logout>1</Logout></request>"
-            if _sendRequest "api/user/logout"; then 
+        xmldata="<?xml version: '1.0' encoding='UTF-8'?><request><Logout>1</Logout></request>"
+        if _sendRequest "api/user/logout"; then 
             tokenlist=""
             sessID=""
             token=""
+            login_state=""
         fi
-            return $?
+        return $?
     fi
     return 1
 }
 
+login_state=""
+
 # parameter: none
 function _loginState() {
+   if [ ! -z "$login_state" ]; then return $login_state; fi # assume, that the login state does not change, except after logout
    _sendRequest "api/user/hilink_login"
+   login_state=0
    state=$(echo $response | sed  -rn 's/.*<hilink_login>(.*)<\/hilink_login>.*/\1/pi')
    if [ ! -z "$state" ] && [ $state -eq 0 ]; then       # no login enabled
         return 0
@@ -291,6 +294,7 @@ function _loginState() {
    if [ ! -z "$state" ] && [ $state -eq 0 ]; then       # already logged in
         return 0
    fi
+   login_state=1
    return 1
 }
 
@@ -418,9 +422,9 @@ function _getErrorText() {
     if [ ! -z "$1" ]; then err="$1"; fi
     if [ -z "$err" ]; then return 1; fi
     errortext="$err"
-    if [[  "$err" =~ ERROR\ *([0-9]*) ]] && [ ! -z "$BASH_REMATCH" ]; then
+    if [[  "$err" =~ ERROR\ *([0-9]*) ]] && [ ! -z "${BASH_REMATCH[1]}" ]; then
         code=${BASH_REMATCH[1]}
-        if [ ! -z "${err_hilink_api[$code]}" ]; then 
+        if [ ! -z "$code" ] && [ ! -z "${err_hilink_api[$code]}" ]; then 
             errortext="${err_hilink_api[$code]}"
         fi
     fi
