@@ -65,9 +65,7 @@ function _initHilinkAPI() {
             _sessToken
         fi
     fi
-    if [ -z "$sessID" ] || [ -z "$token" ]; then
-        _sessToken
-    fi
+    if [ -z "$sessID" ] || [ -z "$token" ]; then _sessToken; fi
     _login
     return $?
 }
@@ -183,7 +181,7 @@ function _getMobileDataStatus() {
 function _enableSIM() {
 #SimState:
 #255 - no SIM,
-#256 - error CPIN,host=$host_default 
+#256 - error CPIN, 
 #257 - ready,
 #258 - PIN disabled,
 #259 - check PIN,
@@ -210,7 +208,6 @@ function _sessToken() {
     tokenlist=""
     token=""
     sessID=""
-    login_state=""
     response=$(curl -s http://$host/api/webserver/SesTokInfo -m 5 2> /dev/null)
     if [ -z "$response" ]; then echo "No access to device at $host"; return 1; fi
     status=$(echo "$response" | sed  -nr 's/.*<code>([0-9]*)<\/code>.*/\1/ip')
@@ -271,31 +268,36 @@ function _logout() {
             tokenlist=""
             sessID=""
             token=""
-            login_state=""
+			login_enabled=""
         fi
         return $?
     fi
     return 1
 }
 
-login_state=""
-
 # parameter: none
 function _loginState() {
-   if [ ! -z "$login_state" ]; then return $login_state; fi # assume, that the login state does not change, except after logout
-   _sendRequest "api/user/hilink_login"
-   login_state=0
-   state=$(echo $response | sed  -rn 's/.*<hilink_login>(.*)<\/hilink_login>.*/\1/pi')
-   if [ ! -z "$state" ] && [ $state -eq 0 ]; then       # no login enabled
-        return 0
-   fi
-   _sendRequest "api/user/state-login"
-   state=`echo "$response" | sed  -rn 's/.*<state>(.*)<\/state>.*/\1/pi'`
-   if [ ! -z "$state" ] && [ $state -eq 0 ]; then       # already logged in
-        return 0
-   fi
-   login_state=1
-   return 1
+	status="OK"
+	if [ -z "$login_enabled" ]; then _checkLoginEnabled; fi
+	if [ $login_enabled -eq 1 ]; then return 0; fi # login is disabled
+	_sendRequest "api/user/state-login"
+	state=`echo "$response" | sed  -rn 's/.*<state>(.*)<\/state>.*/\1/pi'`
+	if [ ! -z "$state" ] && [ $state -eq 0 ]; then       # already logged in
+		return 0
+	fi
+	return 1
+}
+
+function _checkLoginEnabled() {
+    if _sendRequest "api/user/hilink_login"; then
+		login_enabled=0
+		state=$(echo $response | sed  -rn 's/.*<hilink_login>(.*)<\/hilink_login>.*/\1/pi')
+		if [ ! -z "$state" ] && [ $state -eq 0 ]; then       # no login enabled
+			login_enabled=1
+		fi
+	else
+		login_enabled=""
+	fi
 }
 
 # switch mobile data on/off  1/0
@@ -375,6 +377,8 @@ function _getToken() {
         if [ ${#tokenlist[@]} -eq 0 ]; then
             _logout     # use the last token to logout
         fi
+	else
+		_sessToken		# old token has been used - need new session
     fi
 }
 
