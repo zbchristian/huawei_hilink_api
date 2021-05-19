@@ -68,7 +68,8 @@ After the communcation has been done, the API should be terminated by
 ```
 $ _closeHilinkAPI
 ```
-This ensures, that the session is closed and access tokens are cleared.
+This ensures, that the session is closed and access tokens are cleared. The option `save` allows to save the session data to a file and resume with the next call to `_initHilinkAPI`. This only works for the next minute. 
+This is recommended, if multiple calls within a short time are foreseen.
 
 Be aware, that each shell script runs in a separate shell environment. You need to close the API before leaving the script. Otherwise the communication might still be open and a new access is blocked for a while!
 

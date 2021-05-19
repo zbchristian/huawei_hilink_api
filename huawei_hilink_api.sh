@@ -44,8 +44,8 @@
 #
 # Termination
 # ===========
-# cleanup the API before quitting the shell
-# _closeHilinkAPI
+# cleanup the API before quitting the shell 
+# _closeHilinkAPI  (optional: add parameter "save" to save the session/token data for subsequent calls. Valid for a few minutes.)
 
 host_default="192.168.8.1"
 save_file="/tmp/hilink_api_saved.dat"
@@ -74,8 +74,8 @@ function _initHilinkAPI() {
 
 function _getSavedData() {
     if [ -f $save_file ]; then  # restore saved session data
-		dat=$(cat $save_file)
-		sessID=$(echo "$dat" | sed -nr 's/sessionid: ([a-z0-9]*)/\1/ip')
+        dat=$(cat $save_file)
+        sessID=$(echo "$dat" | sed -nr 's/sessionid: ([a-z0-9]*)/\1/ip')
         token=$(echo "$dat" | sed -nr 's/token: ([a-z0-9]*)/\1/ip')
         tokenlist=( $(echo "$dat" | sed -nr 's/tokenlist: ([a-z0-9 ]*)/\1/ip') )
     fi
@@ -87,7 +87,8 @@ function _closeHilinkAPI() {
     if [ -z "$host" ]; then host=$host_default; fi
     if ! _hostReachable; then return 1; fi
     rm -f $save_file
-    if [ ! -z "$1" ] && [ "${1,,}" =~ "save" ]; then
+	[ ! -z "$1" ] && opt="${1,,}"
+    if [ ! -z "$opt" ] && [ "$opt" = "save" ]; then
         echo "sessionid: $sessID" > $save_file
         echo "token: $token" >> $save_file
         echo "tokenlist: ${tokenlist[@]}" >> $save_file
@@ -251,8 +252,9 @@ function _login() {
             rm -f $header_file
             _sendRequest "api/user/login"
             if [ ! -z "$status" ] && [ "$status" = "OK" ]; then 
-        tokenlist=( $(cat $header_file | sed -rn 's/^__RequestVerificationToken:\s*([0-9a-z#]*).*$/\1/pi' | sed 's/#/ /g') )
-        _getToken
+                # store the list of 30 tokens. Each token is valid for a single request
+                tokenlist=( $(cat $header_file | sed -rn 's/^__RequestVerificationToken:\s*([0-9a-z#]*).*$/\1/pi' | sed 's/#/ /g') )
+                _getToken
                 sessID=$(cat $header_file  | grep -ioP 'SessionID=([a-z0-9]*)')
                 if [ ! -z "$sessID" ] &&  [ ! -z "$token" ]; then
                    return 0 
@@ -372,7 +374,8 @@ function _getToken() {
     fi
 }
 
-# Analyse $status for error code 
+# Analyse $status for error code
+# return error text in $status
 function _handleError() {
     txt=$(_getErrorText)
     if [ -z "$code" ]; then return 1; fi
@@ -412,13 +415,13 @@ err_hilink_api[125003]=${errors[125001]}
 function _getErrorText() {
     err="$status"
     code="0"
-    if [ -z "$1" ]; then err="$1"; fi
+    if [ ! -z "$1" ]; then err="$1"; fi
     if [ -z "$err" ]; then return 1; fi
     errortext="$err"
     if [[  "$err" =~ ERROR\ *([0-9]*) ]] && [ ! -z "$BASH_REMATCH" ]; then
         code=${BASH_REMATCH[1]}
-        if [ ! -z "$err_hilink_api[$code]}" ]; then 
-            errortext="$err_hilink_api[$code]}"
+        if [ ! -z "${err_hilink_api[$code]}" ]; then 
+            errortext="${err_hilink_api[$code]}"
         fi
     fi
     echo $errortext
