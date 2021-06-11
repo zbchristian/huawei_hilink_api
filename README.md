@@ -33,16 +33,16 @@ If a login is required, the communication is more complex, since the device retu
 The bash script `huawei_hilink_api.sh` contains all required functions to communicate with a Hilink device. Login, logout, enabling the SIM card and managing the access tokens is hidden from the user. Just call for example the function `_switchMobileData on` in your script and the rest happens in the background. For this to work, an initialization of the API is required:
 ```
 $ source huawei_hilink_api.sh
-$ host="192.168.8.1"
-$ pw="1234Secret"
-$ pin="1234"
+$ hilink_host="192.168.8.1"
+$ hilink_password="1234Secret"
+$ hilink_pin="1234"
 $ if ! _initHilinkAPI; then 
 $    echo "Failed - return code $status"
 $    exit
 $ fi
 ```
 
-The first line imports all functions of the API into the running shell. If the default ip-address is correct, the variable `host` is not necessary. If the web GUI of the device is not locked, no password is required. In case the SIM card is not locked with a PIN, no PIN is required.
+The first line imports all functions of the API into the running shell. If the default ip-address is correct, the variable `hilink_host` is not necessary. If the web GUI of the device is not locked, no password is required. In case the SIM card is not locked with a PIN, no PIN is required.
 
 After the initialization, all functions of the API can be called.
 Examples:
@@ -84,6 +84,7 @@ Be aware, that each shell script runs in a separate shell environment. You need 
 * `_getDeviceInformation` - get device informations (name ...)
 * `_getNetProvider` - information about the current network provider
 * `_getSignal` - get signal information (rssi and more)
+* `_getAllInformations` - get device, provider and signal informations and output key/values as text
 * `_enableSIM` - enable the SIM. Will call `_setPIN`, if locked
 * `_loginState` - returns 0, if session is logged in, or no login required. Otherwise 1 is returned
 * `_setPIN` - set the PIN of the SIM card. Parameter is the PIN number
@@ -99,5 +100,5 @@ Be aware, that each shell script runs in a separate shell environment. You need 
 
 
 ## Direct communication with the device
-The function `_sendRequest` allows to call directly the Hilink device. the parameter is the path of the corresponding function. Example `_sendRequest "api/monitoring/status`. The return value is 0 if successful and 1 if it failed. To send a request, the corresponding XML data are required in `$xmldata`. The response is retuned in `$response` and the status of the call in `$status`.
+The function `_sendRequest` allows to call directly the Hilink device. the parameter is the path of the corresponding function. Example `_sendRequest "api/monitoring/status`. The return value is 0 if successful and 1 if it failed. To send a request, the corresponding XML data are required in `$hilink_xmldata`. The response is retuned in `$response` and the status of the call in `$status`.
 

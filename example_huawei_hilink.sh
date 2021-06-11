@@ -15,10 +15,10 @@
 source huawei_hilink_api.sh
 
 # initialialize required variables
-host="192.168.8.1"  # ip-address of the device (default 192.168.8.1)
-user="admin"        # user name in case of a locked device (default admin)
-password="1234Secret"     # password in case of a locked device
-pin="1234"          # PIN of the SIM
+hilink_host="192.168.8.1"       # ip-address of the device (default 192.168.8.1)
+hilink_user="admin"             # user name in case of a locked device (default admin)
+hilink_password="1234Secret"    # password in case of a locked device
+hilink_pin="1234"               # PIN of the SIM
 
 # initialize the API
 if ! _initHilinkAPI; then echo "Init failed - return status: $status"; exit; fi

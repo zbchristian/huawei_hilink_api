@@ -6,15 +6,16 @@
 # - send a standard http request with a xml formatted string to the device (default IP 192.169.8.1)
 # - Howto:
 #   o "source" this script in your own script from the command line
-#   o if host ip/name differs, set "host=192.168.178.1" before calling any function
-#   o if the device is locked by a password, set user="admin"; password"1234secret"
-#     _login is called automaticallcall
-#     Password types 3 and 4 are supported
-#   o if the SIM is requiring a PIN, set "pin=1234"
+#   o if hilink_host ip/name differs, set "hilink_host=192.168.178.1" before calling any function
+#   o if the device is locked by a password, set hilink_user="admin"; hilink_password"1234secret"
+#     _login is called automatically
+#     only password type 4 is supported
+#   o if the SIM is requiring a PIN, set "hilink_pin=1234"
 #   o connect device to network: _switchMobileData ON  ( or 1 )
 #   o disconnect device: _switchMobileData OFF  ( or 0 )
 #   o get informations about the device: _getDeviceInformation and _getStatus and _getNetProvider
 #     all functions return XML formatted data in $response.
+#   o _getAllInformations: returns all available informations as key/value pairs (outputs text) 
 #   o Check if device is connected: "if _isConnected; then .... fi"
 #   o $response can be parsed by calling _valueFromResponse 
 #     e.g "_valueFromResponse msisdn" to get the phone number after a call to _getDeviceInformation
@@ -36,18 +37,18 @@
 # Initialization procedure
 # ========================
 #
-# host=192.168.8.1      # ip address of device
-# user="admin"          # user name if locked (default admin)
-# password"1234Secret"       # password if locked 
-# pin="1234"            # PIN of SIM
-# _initHilinkAPI        # initialize the API
+# hilink_host=192.168.8.1       # ip address of device
+# hilink_user="admin"           # user name if locked (default admin)
+# hilink_password="1234Secret"  # password if locked 
+# hilink_pin="1234"             # PIN of SIM
+# _initHilinkAPI                # initialize the API
 #
 # Termination
 # ===========
 # cleanup the API before quitting the shell 
 # _closeHilinkAPI  (optional: add parameter "save" to save the session/token data for subsequent calls. Valid for a few minutes.)
 #
-# BE AWARE, THAT THE API USES SOME GLOBAL VARIABLES : host, user, password, pin, response, status
+# BE AWARE, THAT THE API USES SOME GLOBAL VARIABLES : hilink_host, user, password, pin, response, status
 # USE THESE ONLY TO COMMUNICATE WITH THE API.
 # DO NOT USE THE VARIABLE PRE_FIX "hilink_" FOR YOUR OWN VARIABLES
 #
@@ -59,7 +60,7 @@ hilink_header_file="/tmp/hilink_login_hdr.txt"
 
 # initialize
 function _initHilinkAPI() {
-    if [ -z "$host" ]; then host=$hilink_host_default; fi
+    if [ -z "$hilink_host" ]; then hilink_host=$hilink_host_default; fi
     if ! _hostReachable; then return 1; fi
     if [ -f $hilink_save_file ]; then # found file with saved data
         _getSavedData
@@ -87,7 +88,7 @@ function _getSavedData() {
 # Cleanup
 # parameter: "save" - will store sessionid and tokens in file
 function _closeHilinkAPI() {
-    if [ -z "$host" ]; then host=$hilink_host_default; fi
+    if [ -z "$hilink_host" ]; then hilink_host=$hilink_host_default; fi
     if ! _hostReachable; then return 1; fi
     rm -f $hilink_save_file
     [ ! -z "$1" ] && local opt="${1,,}"
@@ -181,7 +182,7 @@ function _getMobileDataStatus() {
 }
 
 
-# PIN of SIM can be passed either as $pin, or as parameter
+# PIN of SIM can be passed either as $hilink_pin, or as parameter
 # parameter: PIN number of SIM card
 function _enableSIM() {
 #SimState:
@@ -192,14 +193,14 @@ function _enableSIM() {
 #259 - check PIN,
 #260 - PIN required,
 #261 - PUK required
-    if [ ! -z "$1" ]; then pin="$1"; fi
+    if [ ! -z "$1" ]; then hilink_pin="$1"; fi
     if ! _login; then return 1; fi
     if _sendRequest "api/pin/status"; then
-        local simstate=`echo $response | sed  -rn 's/.*<simstate>([0-9]*)<\/simstate>.*/\1/pi'`
+        local simstate=$(echo $response | sed  -rn 's/.*<simstate>([0-9]*)<\/simstate>.*/\1/pi')
         if [[ $simstate -eq 257  ]]; then status="SIM ready"; return 0; fi
         if [[ $simstate -eq 260  ]]; then 
         status="PIN required"
-            if [ ! -z "$pin" ]; then _setPIN "$pin"; fi
+            if [ ! -z "$hilink_pin" ]; then _setPIN "$hilink_pin"; fi
         return $?
     fi
         if [[ $simstate -eq 255  ]]; then status="NO SIM"; return 1; fi
@@ -213,12 +214,12 @@ function _sessToken() {
     hilink_tokenlist=""
     hilink_token=""
     hilink_sessID=""
-    response=$(curl -s http://$host/api/webserver/SesTokInfo -m 5 2> /dev/null)
-    if [ -z "$response" ]; then echo "No access to device at $host"; return 1; fi
+    response=$(curl -s http://$hilink_host/api/webserver/SesTokInfo -m 5 2> /dev/null)
+    if [ -z "$response" ]; then echo "No access to device at $hilink_host"; return 1; fi
     status=$(echo "$response" | sed  -nr 's/.*<code>([0-9]*)<\/code>.*/\1/ip')
     if [ -z "$status" ]; then
-        hilink_token=`echo $response | sed  -r 's/.*<TokInfo>(.*)<\/TokInfo>.*/\1/'`
-        hilink_sessID=`echo $response | sed  -r 's/.*<SesInfo>(.*)<\/SesInfo>.*/\1/'`
+        hilink_token=$(echo $response | sed  -r 's/.*<TokInfo>(.*)<\/TokInfo>.*/\1/')
+        hilink_sessID=$(echo $response | sed  -r 's/.*<SesInfo>(.*)<\/SesInfo>.*/\1/')
         if [ ! -z "$hilink_sessID" ] &&  [ ! -z "$hilink_token" ]; then 
             hilink_sessID="SessionID=$hilink_sessID"
             return 0
@@ -228,7 +229,7 @@ function _sessToken() {
 }
 
 # unlock device (if locked) with user name and password
-# requires stored user="admin"; password"1234secret";host=$hilink_host_default 
+# requires stored hilink_user="admin"; hilink_password"1234secret";hilink_host=$hilink_host_default 
 # parameter: none
 function _login() {
     if _loginState; then return 0; fi    # login not required, or already done
@@ -237,18 +238,18 @@ function _login() {
     if ! _sendRequest "api/user/state-login"; then return 1; fi
     local pwtype=$(echo "$response" | sed  -rn 's/.*<password_type>([0-9])<\/password_type>.*/\1/pi')
     if [ -z "$pwtype" ];then local pwtype=4; fi   # fallback is type 4
-	local ret=1
-    if [[ ! -z "$user" ]] && [[ ! -z "$password" ]]; then
+    local ret=1
+    if [[ ! -z "$hilink_user" ]] && [[ ! -z "$hilink_password" ]]; then
         # password encoding
         # type 3 : base64(pw) encoded
         # type 4 : base64(sha256sum(user + base64(sha256sum(pw)) + token))
-        local pwtype3=$(echo -n "$password" | base64 --wrap=0)
-        local hashedpw=$(echo -n "$password" | sha256sum -b | sed -nr 's/^([0-9a-z]*).*$/\1/ip' )
+        local pwtype3=$(echo -n "$hilink_password" | base64 --wrap=0)
+        local hashedpw=$(echo -n "$hilink_password" | sha256sum -b | sed -nr 's/^([0-9a-z]*).*$/\1/ip' )
         local hashedpw=$(echo -n "$hashedpw" | base64 --wrap=0)
-        local pwtype4=$(echo -n "$user$hashedpw$hilink_token" | sha256sum -b | sed -nr 's/^([0-9a-z]*).*$/\1/ip' )
+        local pwtype4=$(echo -n "$hilink_user$hashedpw$hilink_token" | sha256sum -b | sed -nr 's/^([0-9a-z]*).*$/\1/ip' )
         local encpw=$(echo -n "$pwtype4" | base64 --wrap=0)
         if [ $pwtype -ne 4 ]; then local encpw=$pwtype3; fi
-        hilink_xmldata="<?xml version='1.0' encoding='UTF-8'?><request><Username>$user</Username><Password>$encpw</Password><password_type>$pwtype</password_type></request>"
+        hilink_xmldata="<?xml version='1.0' encoding='UTF-8'?><request><Username>$hilink_user</Username><Password>$encpw</Password><password_type>$pwtype</password_type></request>"
         hilink_xtraopts="--dump-header $hilink_header_file"
         rm -f $hilink_header_file
         _sendRequest "api/user/login"
@@ -273,7 +274,7 @@ function _logout() {
             hilink_tokenlist=""
             hilink_sessID=""
             hilink_token=""
-			login_enabled=""
+            login_enabled=""
         fi
         return $?
     fi
@@ -282,31 +283,31 @@ function _logout() {
 
 # parameter: none
 function _loginState() {
-	status="OK"
-	if [ -z "$login_enabled" ]; then _checkLoginEnabled; fi
-	if [ $login_enabled -eq 1 ]; then return 0; fi # login is disabled
-	_sendRequest "api/user/state-login"
-	state=`echo "$response" | sed  -rn 's/.*<state>(.*)<\/state>.*/\1/pi'`
-	if [ ! -z "$state" ] && [ $state -eq 0 ]; then       # already logged in
-		return 0
-	fi
-	return 1
+    status="OK"
+    if [ -z "$login_enabled" ]; then _checkLoginEnabled; fi
+    if [ $login_enabled -eq 1 ]; then return 0; fi # login is disabled
+    _sendRequest "api/user/state-login"
+    state=`echo "$response" | sed  -rn 's/.*<state>(.*)<\/state>.*/\1/pi'`
+    if [ ! -z "$state" ] && [ $state -eq 0 ]; then       # already logged in
+        return 0
+    fi
+    return 1
 }
 
 function _checkLoginEnabled() {
     if _sendRequest "api/user/hilink_login"; then
-		login_enabled=0
-		local state=$(echo $response | sed  -rn 's/.*<hilink_login>(.*)<\/hilink_login>.*/\1/pi')
-		if [ ! -z "$state" ] && [ $state -eq 0 ]; then       # no login enabled
-			login_enabled=1
-		fi
-	else
-		login_enabled=""
-	fi
+        login_enabled=0
+        local state=$(echo $response | sed  -rn 's/.*<hilink_login>(.*)<\/hilink_login>.*/\1/pi')
+        if [ ! -z "$state" ] && [ $state -eq 0 ]; then       # no login enabled
+            login_enabled=1
+        fi
+    else
+        login_enabled=""
+    fi
 }
 
 # switch mobile data on/off  1/0
-# if SIM is locked, $pin has to be set
+# if SIM is locked, $hilink_pin has to be set
 # parameter: state - ON/OFF or 1/0
 function _switchMobileData() {
     if [ -z "$1" ]; then return 1; fi
@@ -315,7 +316,7 @@ function _switchMobileData() {
     [ "$mode" = "on" ] && local mode=1
     [ "$mode" = "off" ] && local mode=0
     if [[ $mode -ge 0 ]]; then
-        if _enableSIM "$pin"; then
+        if _enableSIM "$hilink_pin"; then
             hilink_xmldata="<?xml version: '1.0' encoding='UTF-8'?><request><dataswitch>$mode</dataswitch></request>"
             _sendRequest "api/dialup/mobile-dataswitch"
             return $?
@@ -333,7 +334,7 @@ function _setPIN() {
     return $?
 }
 
-# Send request to host at http://$host/$apiurl
+# Send request to host at http://$hilink_host/$apiurl
 # data in $hilink_xmldata and options in $hilink_xtraopts
 # parameter: apiurl (e.g. "api/user/login")
 function _sendRequest() {
@@ -343,10 +344,10 @@ function _sendRequest() {
     local ret=1
     if [ -z "$hilink_sessID" ] || [ -z "$hilink_token" ]; then _sessToken; fi 
     if [ -z "$hilink_xmldata" ];then
-        response=$(curl -s http://$host/$apiurl -m 10 \
+        response=$(curl -s http://$hilink_host/$apiurl -m 10 \
                      -H "Cookie: $hilink_sessID")
     else 
-        response=$(curl -s -X POST http://$host/$apiurl -m 10 \
+        response=$(curl -s -X POST http://$hilink_host/$apiurl -m 10 \
                     -H "Content-Type: text/xml"  \
                     -H "Cookie: $hilink_sessID" \
                     -H "__RequestVerificationToken: $hilink_token" \
@@ -382,8 +383,8 @@ function _getToken() {
         if [ ${#hilink_tokenlist[@]} -eq 0 ]; then
             _logout     # use the last token to logout
         fi
-	else
-		_sessToken		# old token has been used - need new session
+    else
+        _sessToken      # old token has been used - need new session
     fi
 }
 
@@ -430,11 +431,11 @@ function _getErrorText() {
     local code="0"
     if [ ! -z "$1" ]; then local err="$1"; fi
     if [ -z "$err" ]; then return 1; fi
-    errortext="$err"
+    local errortext="$err"
     if [[  "$err" =~ ERROR\ *([0-9]*) ]] && [ ! -z "${BASH_REMATCH[1]}" ]; then
         local code=${BASH_REMATCH[1]}
         if [ ! -z "$code" ] && [ ! -z "${hilink_err_api[$code]}" ]; then 
-            errortext="${hilink_err_api[$code]}"
+            local errortext="${hilink_err_api[$code]}"
         fi
     fi
     echo $errortext
@@ -442,7 +443,7 @@ function _getErrorText() {
 }
 
 function _hostReachable() {
-    local avail=$( timeout 0.5 ping -c 1 $host | sed -rn 's/.*time=.*/1/p' )
+    local avail=$( timeout 0.5 ping -c 1 $hilink_host | sed -rn 's/.*time=.*/1/p' )
     if [ -z "$avail" ]; then return 1; fi
     return 0;
 }
@@ -478,10 +479,10 @@ hilink_tokenlist=""
 hilink_sessID=""
 hilink_xmldata=""
 hilink_xtraopts=""
-host=$hilink_host_default
-user="admin"
-password=""
-pin=""
+hilink_host=$hilink_host_default
+hilink_user="admin"
+hilink_password=""
+hilink_pin=""
 response=""
 status=""
  
