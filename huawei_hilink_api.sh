@@ -60,7 +60,7 @@ hilink_header_file="/tmp/hilink_login_hdr.txt"
 
 # initialize
 function _initHilinkAPI() {
-	local age
+    local age
     if [ -z "$hilink_host" ]; then hilink_host=$hilink_host_default; fi
     if ! _hostReachable; then return 1; fi
     if [ -f $hilink_save_file ]; then # found file with saved data
@@ -78,7 +78,7 @@ function _initHilinkAPI() {
 }
 
 function _getSavedData() {
-	local dat
+    local dat
     if [ -f $hilink_save_file ]; then  # restore saved session data
         dat=$(cat $hilink_save_file)
         hilink_sessID=$(echo "$dat" | sed -nr 's/sessionid: ([a-z0-9]*)/\1/ip')
@@ -90,7 +90,7 @@ function _getSavedData() {
 # Cleanup
 # parameter: "save" - will store sessionid and tokens in file
 function _closeHilinkAPI() {
-	local opt
+    local opt
     if [ -z "$hilink_host" ]; then hilink_host=$hilink_host_default; fi
     if ! _hostReachable; then return 1; fi
     rm -f $hilink_save_file
@@ -196,7 +196,7 @@ function _enableSIM() {
 #259 - check PIN,
 #260 - PIN required,
 #261 - PUK required
-	local simstate
+    local simstate
     if [ ! -z "$1" ]; then hilink_pin="$1"; fi
     if ! _login; then return 1; fi
     if _sendRequest "api/pin/status"; then
@@ -236,7 +236,7 @@ function _sessToken() {
 # requires stored hilink_user="admin"; hilink_password"1234secret";hilink_host=$hilink_host_default 
 # parameter: none
 function _login() {
-	local ret encpw pwtype pwtype3 hashedpw pwtype4	
+    local ret encpw pwtype pwtype3 hashedpw pwtype4 
     if _loginState; then return 0; fi    # login not required, or already done
     _sessToken
     # get password type
@@ -300,7 +300,7 @@ function _loginState() {
 }
 
 function _checkLoginEnabled() {
-	local state
+    local state
     if _sendRequest "api/user/hilink_login"; then
         hilink_login_enabled=0
         state=$(echo $response | sed  -rn 's/.*<hilink_login>(.*)<\/hilink_login>.*/\1/pi')
@@ -334,7 +334,7 @@ function _switchMobileData() {
 
 # parameter: PIN of SIM card
 function _setPIN() {
-	local pin
+    local pin
     if [ -z "$1" ]; then return 1; fi
     pin="$1"
     hilink_xmldata="<?xml version: '1.0' encoding='UTF-8'?><request><OperateType>0</OperateType><CurrentPin>$pin</CurrentPin><NewPin></NewPin><PukCode></PukCode></request>"
@@ -346,7 +346,7 @@ function _setPIN() {
 # data in $hilink_xmldata and options in $hilink_xtraopts
 # parameter: apiurl (e.g. "api/user/login")
 function _sendRequest() {
-	local ret apiurl
+    local ret apiurl
     status="ERROR"
     if [ -z "$1" ]; then return 1; fi 
     apiurl="$1"
@@ -400,7 +400,7 @@ function _getToken() {
 # Analyse $status for error code
 # return error text in $status
 function _handleError() {
-	local ret txt
+    local ret txt
     txt=$(_getErrorText)
     if [ -z "$code" ]; then return 1; fi
     ret=0
@@ -437,7 +437,7 @@ hilink_err_api[125003]=${hilink_err_api[125001]}
 # check error and return error text
 # status passsed in $status, or $1
 function _getErrorText() {
-	local err code errortext
+    local err code errortext
     err="$status"
     code="0"
     if [ ! -z "$1" ]; then err="$1"; fi
@@ -454,7 +454,7 @@ function _getErrorText() {
 }
 
 function _hostReachable() {
-	local avail
+    local avail
     avail=$( timeout 0.5 ping -c 1 $hilink_host | sed -rn 's/.*time=.*/1/p' )
     if [ -z "$avail" ]; then return 1; fi
     return 0;
@@ -464,7 +464,7 @@ function _hostReachable() {
 # call another function first!
 # parameter: tag-name
 function _valueFromResponse() {
-	local par value
+    local par value
     if [ -z "$response" ] || [ -z "$1" ]; then return 1; fi
     par="$1"
     value=$(echo $response | sed  -rn 's/.*<'$par'>(.*)<\/'$par'>.*/\1/pi')
