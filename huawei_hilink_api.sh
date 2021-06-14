@@ -120,6 +120,7 @@ function _getStatus() {
 }
 
 function _isConnected() {
+    local conn
     conn=$(_getStatus "connectionstatus")
     status="NO"
     if [ ! -z "$conn" ] && [ $conn -eq 901 ]; then
@@ -203,7 +204,7 @@ function _enableSIM() {
         simstate=$(echo $response | sed  -rn 's/.*<simstate>([0-9]*)<\/simstate>.*/\1/pi')
         if [[ $simstate -eq 257  ]]; then status="SIM ready"; return 0; fi
         if [[ $simstate -eq 260  ]]; then 
-        status="PIN required"
+            status="PIN required"
             if [ ! -z "$hilink_pin" ]; then _setPIN "$hilink_pin"; fi
         return $?
     fi
@@ -288,6 +289,7 @@ function _logout() {
 
 # parameter: none
 function _loginState() {
+    local state
     status="OK"
     if [ -z "$hilink_login_enabled" ]; then _checkLoginEnabled; fi
     if [ $hilink_login_enabled -eq 1 ]; then return 0; fi # login is disabled
