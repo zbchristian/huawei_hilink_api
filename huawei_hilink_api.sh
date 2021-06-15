@@ -30,6 +30,7 @@
 #
 # required software: curl, base64, sha256sum, sed
 #
+# ToDo: improve error handling
 #
 # zbchristian 2021
 #
@@ -458,7 +459,8 @@ function _getErrorText() {
 function _hostReachable() {
     local avail
     avail=$( timeout 0.5 ping -c 1 $hilink_host | sed -rn 's/.*time=.*/1/p' )
-    if [ -z "$avail" ]; then return 1; fi
+    if [ -z "$avail" ]; then status="ERROR: Not reachable"; return 1; fi
+    status="OK"
     return 0;
 }
 
