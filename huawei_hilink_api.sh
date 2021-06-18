@@ -235,7 +235,7 @@ function _sessToken() {
 }
 
 # unlock device (if locked) with user name and password
-# requires stored hilink_user="admin"; hilink_password"1234secret";hilink_host=$hilink_host_default 
+# requires $hilink_user, $hilink_password, $hilink_host 
 # parameter: none
 function _login() {
     local ret encpw pwtype pwtype3 hashedpw pwtype4 
