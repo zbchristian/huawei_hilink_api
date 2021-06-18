@@ -1,7 +1,7 @@
 # Bash script based API for Huawei Hilink Mobile Data Devices
-A lot of USB data devices (e.g. E3372H-320) from Huawei contain a router and an web interface (Hilink device). These devices 
+A lot of USB data devices (e.g. E3372H-320) from Huawei contain a router and a web interface (Hilink device). These devices 
 include a DHCP server and show up as an ethernet port (e.g. eth1).
-The communication utilizes HTTP as the protocol.
+The communication utilizes HTTP as the communication protocol.
 
 The API allows to 
 * Log into the device
@@ -18,7 +18,7 @@ The default parameters of these devices are:
 The example `example_huawei_hilink.sh` has to be called with a single parameter `on` or `off`. The script opens the API, connects or disconnects to/from the network and, in case of a connection, prints an information about the device and the connection. The API is terminated at the end of the script.
 
 ## The Protocol
-Since HTTP is used for the communication, each API call correspond to an HTTP address.
+Since HTTP is used for the communication, each API call correspond to a specific URL.
 
 Example: A `GET` request to `http://192.168.8.1/api/webserver/SesTokInfo` will return a `SessionID` and an access token.
 These are required for the communication with the API. To retrieve informations only the `SessionID` is required. To send values  (a request) to the device, or trigger an action, in addition the access token is required.
@@ -30,7 +30,7 @@ All parameters and return values to and from the device are passed as XML data.
 If a login is required, the communication is more complex, since the device returns after a succesful login a list with 30 access tokens. Each of these tokens can only be used once.   
 
 # The Bash API
-The bash script `huawei_hilink_api.sh` contains all required functions to communicate with a Hilink device. Login, logout, enabling the SIM card and managing the access tokens is hidden from the user. Just call for example the function `_switchMobileData on` in your script and the rest happens in the background. For this to work, an initialization of the API is required:
+The bash script `huawei_hilink_api.sh` contains all required functions to communicate with a Hilink device. Login, logout, enabling the SIM card and managing the access tokens. All this is hidden from the user. For example a call to the function `_switchMobileData on` in your script will automatically perform the authentification in the background. For this to work, an initialization of the API is required:
 ```
 $ source huawei_hilink_api.sh
 $ hilink_host="192.168.8.1"
@@ -71,7 +71,7 @@ $ _closeHilinkAPI
 This ensures, that the session is closed and access tokens are cleared. The option `save` allows to save the session data to a file and resume with the next call to `_initHilinkAPI`. This only works for the next minute. 
 This is recommended, if multiple calls within a short time are foreseen.
 
-Be aware, that each shell script runs in a separate shell environment. You need to close the API before leaving the script. Otherwise the communication might still be open and a new access is blocked for a while!
+Be aware, that each shell script runs in a separate environment. You need to close the API before leaving the script. Otherwise the communication might still be open and a new access is blocked for a while!
 
 ## Available functions
 
@@ -100,5 +100,5 @@ Be aware, that each shell script runs in a separate shell environment. You need 
 
 
 ## Direct communication with the device
-The function `_sendRequest` allows to call directly the Hilink device. the parameter is the path of the corresponding function. Example `_sendRequest "api/monitoring/status`. The return value is 0 if successful and 1 if it failed. To send a request, the corresponding XML data are required in `$hilink_xmldata`. The response is retuned in `$response` and the status of the call in `$status`.
+The function `_sendRequest` allows to call directly the Hilink device. The parameter is the URL path of the corresponding function. Example `_sendRequest "api/monitoring/status"`. The return value is 0 if successful and 1 if it failed. To send a request, the corresponding XML data are required in `$hilink_xmldata`. The response is retuned in `$response` and the status of the call in `$status`.
 
