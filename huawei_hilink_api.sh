@@ -349,25 +349,26 @@ function _setPIN() {
 # data in $hilink_xmldata and options in $hilink_xtraopts
 # parameter: apiurl (e.g. "api/user/login")
 function _sendRequest() {
-    local ret apiurl
+    local ret apiurl resp
     status="ERROR"
     if [ -z "$1" ]; then return 1; fi 
     apiurl="$1"
+	resp=""
     ret=1
     if [ -z "$hilink_sessID" ] || [ -z "$hilink_token" ]; then _sessToken; fi 
     if [ -z "$hilink_xmldata" ];then
-        response=$(curl -s http://$hilink_host/$apiurl -m 10 \
+        resp=$(curl -s http://$hilink_host/$apiurl -m 10 \
                      -H "Cookie: $hilink_sessID")
     else 
-        response=$(curl -s -X POST http://$hilink_host/$apiurl -m 10 \
+        resp=$(curl -s -X POST http://$hilink_host/$apiurl -m 10 \
                     -H "Content-Type: text/xml"  \
                     -H "Cookie: $hilink_sessID" \
                     -H "__RequestVerificationToken: $hilink_token" \
                     -d "$hilink_xmldata" $hilink_xtraopts 2> /dev/null)
         _getToken
     fi
-    if [ ! -z "$response" ];then 
-        response=$(echo $response | tr -d '\012\015') # delete newline chars 
+    if [ ! -z "$resp" ];then 
+        response=$(echo $resp | tr -d '\012\015') # delete newline chars 
         status=$(echo "$response" | sed  -nr 's/.*<code>([0-9]*)<\/code>.*/\1/ip') # check for error code
         if [ -z "$status" ]; then
             status="OK"
